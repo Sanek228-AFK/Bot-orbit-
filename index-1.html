@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>ORBIT</title>
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#070713;color:white;font-family:Arial,sans-serif;min-height:100vh;padding:25px 18px}
+.container{max-width:480px;margin:auto}
+.header{display:flex;justify-content:space-between;align-items:center;margin-bottom:30px}
+.logo{font-size:25px;font-weight:900;letter-spacing:4px;color:#48eaff}
+.status{color:#55f5d1;font-size:12px}
+.hero{background:linear-gradient(135deg,#16143c,#101b35);border:1px solid #343c83;border-radius:24px;padding:22px;text-align:center;margin-bottom:25px;box-shadow:0 0 30px #3924a522}
+.robot{font-size:65px;margin-bottom:10px;filter:drop-shadow(0 0 15px #22dfff)}
+.hero h1{font-size:25px;margin-bottom:9px}
+.hero p{color:#aaaaca;font-size:14px}
+.section-title{font-size:18px;margin:25px 0 15px}
+.stats{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.stat{background:#131426;border:1px solid #292c52;border-radius:18px;padding:18px}
+.stat strong{display:block;font-size:27px;color:#56eaff;margin-bottom:5px}
+.stat span{font-size:12px;color:#999bb9}
+.task-input{display:flex;gap:8px;margin-bottom:15px}
+.task-input input{flex:1;min-width:0;background:#17182b;border:1px solid #34365d;border-radius:13px;padding:14px;color:white;outline:none}
+button{border:none;cursor:pointer;border-radius:13px;padding:12px 17px;background:linear-gradient(135deg,#20dfff,#9854ff);color:white;font-weight:bold}
+.task{display:flex;align-items:center;gap:12px;background:#141526;border:1px solid #282b4b;border-radius:14px;padding:15px;margin-bottom:9px}
+.task input{flex:none;width:19px;height:19px;accent-color:#36eaff}
+.task.done span{text-decoration:line-through;color:#777991}
+.progress-box{background:#141526;border-radius:18px;padding:18px;margin-top:15px}
+.progress-info{display:flex;justify-content:space-between;font-size:13px;margin-bottom:12px}
+.progress{background:#292b48;height:9px;border-radius:20px;overflow:hidden}
+.progress-fill{background:linear-gradient(90deg,#20e5ff,#a34cff);height:100%;width:0%;transition:width .3s}
+.footer{text-align:center;color:#62647f;font-size:11px;margin-top:35px;padding-bottom:20px}
+</style>
+</head>
+<body>
+<div class="container">
+  <div class="header"><div class="logo">ORBIT.</div><div class="status">● ONLINE</div></div>
+  <div class="hero"><div class="robot">🤖</div><h1 id="greeting">Привет, космонавт!</h1><p>Твой личный центр управления целями</p></div>
+  <div class="stats">
+    <div class="stat"><strong id="total">0</strong><span>Всего задач</span></div>
+    <div class="stat"><strong id="completed">0</strong><span>Выполнено</span></div>
+  </div>
+  <h2 class="section-title">Мои задачи</h2>
+  <div class="task-input"><input id="taskInput" type="text" placeholder="Новая задача..." maxlength="100"><button id="addButton" aria-label="Добавить задачу">+</button></div>
+  <div id="tasks"></div>
+  <div class="progress-box">
+    <div class="progress-info"><span>Прогресс дня</span><strong id="percent">0%</strong></div>
+    <div class="progress"><div class="progress-fill" id="progress"></div></div>
+  </div>
+  <div class="footer">ORBIT • YOUR PERSONAL UNIVERSE</div>
+</div>
+<script>
+const tg = window.Telegram?.WebApp;
+if (tg) { tg.ready(); tg.expand(); tg.setHeaderColor("#070713"); tg.setBackgroundColor("#070713"); }
+const user = tg?.initDataUnsafe?.user;
+if (user?.first_name) document.getElementById("greeting").textContent = "Привет, " + user.first_name + "!";
+let tasks = [];
+try { tasks = JSON.parse(localStorage.getItem("orbit_tasks") || "[]"); } catch { tasks = []; }
+function save() { try { localStorage.setItem("orbit_tasks", JSON.stringify(tasks)); } catch {} }
+function addTask() {
+  const input = document.getElementById("taskInput");
+  const value = input.value.trim();
+  if (!value) return;
+  tasks.push({id: Date.now(), text: value, done: false});
+  input.value = ""; save(); render();
+  tg?.HapticFeedback?.impactOccurred("light");
+}
+function toggleTask(id) {
+  tasks = tasks.map(task => task.id === id ? {...task, done: !task.done} : task);
+  save(); render(); tg?.HapticFeedback?.selectionChanged();
+}
+function render() {
+  const container = document.getElementById("tasks");
+  container.replaceChildren();
+  tasks.forEach(task => {
+    const item = document.createElement("div");
+    item.className = "task" + (task.done ? " done" : "");
+    const checkbox = document.createElement("input");
+    checkbox.type = "checkbox"; checkbox.checked = task.done;
+    checkbox.addEventListener("change", () => toggleTask(task.id));
+    const label = document.createElement("span"); label.textContent = task.text;
+    item.append(checkbox, label); container.appendChild(item);
+  });
+  const total = tasks.length;
+  const completed = tasks.filter(t => t.done).length;
+  const percent = total ? Math.round(completed / total * 100) : 0;
+  document.getElementById("total").textContent = total;
+  document.getElementById("completed").textContent = completed;
+  document.getElementById("percent").textContent = percent + "%";
+  document.getElementById("progress").style.width = percent + "%";
+}
+document.getElementById("addButton").addEventListener("click", addTask);
+document.getElementById("taskInput").addEventListener("keydown", e => { if (e.key === "Enter") addTask(); });
+render();
+</script>
+</body>
+</html>
